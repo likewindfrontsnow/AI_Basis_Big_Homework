@@ -1,7 +1,9 @@
+# splitter.py
 import subprocess
 import os
 import math
 import concurrent.futures
+from utils import retry # <-- Import the retry decorator
 
 def get_media_duration(media_path: str) -> float | None:
     """使用 ffprobe 获取媒体文件总时长（秒），适用于视频和音频。"""
@@ -19,6 +21,7 @@ def get_media_duration(media_path: str) -> float | None:
         print(f"获取媒体时长时发生错误: {e}")
         return None
 
+@retry(max_retries=3, delay=2, allowed_exceptions=(subprocess.CalledProcessError,)) # <-- Apply retry decorator
 def _process_chunk(args) -> str | None:
     """(工作函数) 处理单个音频块的生成。"""
     media_path, output_dir, chunk_duration, i, num_chunks = args
@@ -35,14 +38,17 @@ def _process_chunk(args) -> str | None:
     
     try:
         print(f"开始生成第 {i+1}/{num_chunks} 个音频块: {output_filename}")
+        # Capture stderr and stdout to prevent them from printing directly unless an error occurs
         subprocess.run(command, check=True, capture_output=True, text=True)
         print(f"完成生成第 {i+1}/{num_chunks} 个音频块。")
         return output_filename
     except subprocess.CalledProcessError as e:
+        # The retry decorator will handle this, but we log it for clarity before re-raising
         print(f"处理第 {i+1} 个音频块时失败: {e.stderr}")
-        return None
+        raise e # Re-raise the exception to trigger the retry
     except FileNotFoundError:
         print("错误：找不到 ffmpeg 命令。")
+        # This is a setup error, no point in retrying.
         return None
 
 def split_media_to_audio_chunks_generator(media_path: str, output_dir: str, chunk_duration: int = 600):
@@ -82,17 +88,22 @@ def split_media_to_audio_chunks_generator(media_path: str, output_dir: str, chun
     with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         future_to_args = {executor.submit(_process_chunk, args): args for args in tasks_args}
         for future in concurrent.futures.as_completed(future_to_args):
-            result = future.result()
-            if result:
-                output_files.append(result)
+            try:
+                result = future.result()
+                if result:
+                    output_files.append(result)
+            except Exception as e:
+                # If a chunk fails after all retries, the exception is raised here.
+                yield 'error', f"关键错误：一个音频块在多次尝试后仍然无法处理，已停止。错误: {e}", None
+                # Cancel remaining futures
+                executor.shutdown(wait=False, cancel_futures=True)
+                return
+
             completed_count += 1
-            # 产出实时进度
             yield 'progress', completed_count, num_chunks
 
-    if not output_files:
-        yield 'error', "未能成功生成任何音频块。", None
+    if not output_files or len(output_files) != num_chunks:
+        yield 'error', "未能成功生成所有音频块，可能部分块处理失败。", None
         return
     
-    # 产出最终结果
     yield 'result', sorted(output_files)
-
