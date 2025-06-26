@@ -1,21 +1,19 @@
 # main.py
+import concurrent.futures
 import time
 import os
+import sys
 from video_processor.splitter import split_video_to_audio_chunks
 from video_processor.transcriber import transcribe_single_audio_chunk
-# 从您重命名后的文件中导入
 from dify_api_text import run_workflow
 
-# --- 配置 ---
-DIFY_API_KEY = "app-Ny5hgY02NGRetPfUJwh4g2OV"  # <<< 请把这里换成你的 Dify API Key
-FILE_PATH = 'test.mp4'                      # <<< 请把这里换成你的视频文件名
-OUTPUT_CHUNK_FOLDER = 'audio_chunks'        # 保存音频切片的文件夹
-FINAL_TRANSCRIPT_FILE = 'source_transcript.txt' # 最终文字稿保存的文件名
-USER = "balabala"                           # 用户标识
-INPUT_VARIABLE_NAME = "source_transcript"   # Dify 工作流中定义的输入变量名
-OUTPUT_VARIABLE_NAME = "final_output"     # Dify 工作流中定义的输出变量名
-LOCAL_SAVE_PATH = "result.md"               # 最终智能笔记的保存路径
-
+# 初始化配置
+try:
+    from config import OPENAI_API_KEY,DIFY_API_KEY, FILE_PATH, OUTPUT_CHUNK_FOLDER, FINAL_TRANSCRIPT_FILE, USER, INPUT_VARIABLE_NAME, OUTPUT_VARIABLE_NAME, LOCAL_SAVE_PATH
+except ValueError as e:
+    print(f"{e}", file=sys.stderr)
+    print("注意：为使配置生效，修改 .env文件后请保存并重新运行程序。", file=sys.stderr)
+    sys.exit(1) # 配置错误，程序无法继续
 
 def generate_transcript_from_video(video_path: str, output_dir: str, transcript_save_path: str) -> str | None:
     """
@@ -31,18 +29,26 @@ def generate_transcript_from_video(video_path: str, output_dir: str, transcript_
     )
     
     if not audio_chunks:
-        print("音频切分失败，程序退出。请检查 FFmpeg 是否安装以及视频文件路径是否正确。")
+        print("音频切分失败，程序退出。")
         return None
 
-    # 步骤二：循环处理每个音频块
-    print("\n--- 步骤 2: 开始逐个转录音频块 ---")
+    # 步骤二：并行处理每个音频块
+    print(f"\n--- 步骤 2: 开始并行转录 {len(audio_chunks)} 个音频块 ---")
     all_transcripts = []
-    for i, chunk_path in enumerate(audio_chunks):
-        print(f"处理第 {i+1}/{len(audio_chunks)} 个音频块...")
-        transcript_fragment = transcribe_single_audio_chunk(chunk_path)
-        if transcript_fragment:
-            all_transcripts.append(transcript_fragment)
-        time.sleep(1) # 礼貌性等待，避免API调用过于频繁
+    
+    # max_workers 可以根据你的API速率限制来调整
+    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
+        # 使用 executor.map 来并发执行转录任务
+        # 它会保持结果的顺序与 audio_chunks 的顺序一致
+        transcript_results = executor.map(
+            lambda chunk: transcribe_single_audio_chunk(chunk, OPENAI_API_KEY),
+            audio_chunks
+        )
+        
+        # 收集结果
+        for transcript_fragment in transcript_results:
+            if transcript_fragment:
+                all_transcripts.append(transcript_fragment)
 
     # 步骤三：汇总并保存最终文字稿
     if not all_transcripts:
@@ -84,17 +90,25 @@ def process_transcript_with_dify(transcript_text: str):
 
 
 if __name__ == '__main__':
-    print("--- 大学生智能笔记 Agent 启动 ---")
+    try:
+        print("--- 大学生智能笔记 Agent 启动 ---")
 
-    # 主流程：先生成文字稿
-    full_transcript = generate_transcript_from_video(
-        video_path=FILE_PATH,
-        output_dir=OUTPUT_CHUNK_FOLDER,
-        transcript_save_path=FINAL_TRANSCRIPT_FILE
-    )
+        # 主流程：先生成文字稿
+        full_transcript = generate_transcript_from_video(
+            video_path=FILE_PATH,
+            output_dir=OUTPUT_CHUNK_FOLDER,
+            transcript_save_path=FINAL_TRANSCRIPT_FILE
+        )
 
-    # 然后，如果文字稿成功生成，再用Dify处理
-    if full_transcript:
-        process_transcript_with_dify(full_transcript)
-    else:
-        print("\n由于未能生成文字稿，无法继续执行 Dify 工作流。程序终止。")
+        # 然后，如果文字稿成功生成，再用Dify处理
+        if full_transcript:
+            process_transcript_with_dify(full_transcript)
+        else:
+            print("\n由于未能生成文字稿，无法继续执行 Dify 工作流。程序终止。")
+
+    except KeyboardInterrupt:
+        print("\n\n程序被用户中断。正在退出...")
+        sys.exit(0)
+    except Exception as e:
+        print(f"\n程序运行期间发生未捕获的严重错误: {e}", file=sys.stderr)
+        sys.exit(1)

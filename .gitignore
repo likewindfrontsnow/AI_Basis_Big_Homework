@@ -4,16 +4,16 @@ __pycache__/
 *.pyo
 *.pyd
 
-# 虚拟环境文件夹 (如果你用了的话)
-venv/
-env/
-.venv/
-
-# 我们脚本生成的输出文件
-output/
-
 # IDE 和操作系统产生的临时文件
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# 敏感的环境变量文件
+.env
+
+# 脚本生成的输出文件夹和文件
+output_chunks/
+source_transcript.txt
+result.md

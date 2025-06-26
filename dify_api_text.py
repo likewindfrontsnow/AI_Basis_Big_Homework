@@ -4,24 +4,6 @@ import os
 import json
 
 def run_workflow(input_text: str, user: str, dify_api_key: str, input_variable_name: str, output_variable_name: str, local_save_path: str) -> bool:
-    """
-    以流式模式运行一个“文本输入、文本输出”的Dify工作流。
-
-    该函数会：
-    1. 将输入文本作为变量直接发送给工作流。
-    2. 实时监听 'text_chunk' 事件，拼接完整的输出字符串。
-    3. 在控制台以打字机效果实时打印输出。
-    4. 在工作流成功结束后，将完整的输出文本保存到本地文件。
-    5. 能够处理流式数据中的异常或损坏行。
-
-    :param input_text: 要作为输入的完整文本字符串。
-    :param user: 用户标识。
-    :param dify_api_key: Dify 应用的 API Key。
-    :param input_variable_name: 工作流中定义的输入文本变量名。
-    :param output_variable_name: 工作流中定义的输出文本变量名 (此版本中主要用于逻辑清晰)。
-    :param local_save_path: 最终输出文本的本地保存路径。
-    :return: 如果工作流成功执行并保存文件，返回 True，否则返回 False。
-    """
     workflow_url = "https://api.dify.ai/v1/workflows/run"
     headers = {
         "Authorization": f"Bearer {dify_api_key}",
