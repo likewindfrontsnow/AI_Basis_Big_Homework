@@ -1,4 +1,5 @@
 from openai import OpenAI,APIError, AuthenticationError
+import os
 
 def transcribe_single_audio_chunk(audio_path: str,openai_api_key: str) -> str | None:
     """调用 Whisper API 转录单个音频文件"""
@@ -12,15 +13,18 @@ def transcribe_single_audio_chunk(audio_path: str,openai_api_key: str) -> str | 
         print("  > 错误：OpenAI 客户端未初始化，无法进行转录。")
         return None
     
-    print(f"  > 正在转录: {audio_path}")
+    audio_filename = os.path.basename(audio_path)
+
+    print(f"  > 正在转录: {audio_filename}")
     try:
         with open(audio_path, "rb") as audio_file:
             transcription = client.audio.transcriptions.create(
               model="whisper-1", 
               file=audio_file
             )
-        print(f"  > 转录成功！")
+        print(f"  > ✅ 文件 '{audio_filename}' 转录成功！")
         return transcription.text
+    
     except FileNotFoundError:
         print(f"  > 错误：找不到音频文件: {audio_path}")
         return None

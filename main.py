@@ -3,6 +3,7 @@ import concurrent.futures
 import time
 import os
 import sys
+import shutil
 from video_processor.splitter import split_video_to_audio_chunks
 from video_processor.transcriber import transcribe_single_audio_chunk
 from dify_api_text import run_workflow
@@ -14,6 +15,13 @@ except ValueError as e:
     print(f"{e}", file=sys.stderr)
     print("注意：为使配置生效，修改 .env文件后请保存并重新运行程序。", file=sys.stderr)
     sys.exit(1) # 配置错误，程序无法继续
+
+def check_command_exists(command: str):
+    """检查外部命令是否存在于系统 PATH 中"""
+    if shutil.which(command) is None:
+        print(f"错误：找不到必需的外部命令 '{command}'。", file=sys.stderr)
+        print("请确保您已经正确安装了它，并将其添加到了系统的环境变量(PATH)中。", file=sys.stderr)
+        sys.exit(1)
 
 def generate_transcript_from_video(video_path: str, output_dir: str, transcript_save_path: str) -> str | None:
     """
@@ -45,16 +53,24 @@ def generate_transcript_from_video(video_path: str, output_dir: str, transcript_
             audio_chunks
         )
         
+        successful_chunks = 0
+
         # 收集结果
         for transcript_fragment in transcript_results:
             if transcript_fragment:
                 all_transcripts.append(transcript_fragment)
+                successful_chunks += 1
+
+    total_chunks = len(audio_chunks)
+    if successful_chunks == 0:
+        print("\n❌ 所有音频块都未能成功转录，程序退出。请检查网络连接或API密钥。")
+        return None
+    elif successful_chunks < total_chunks:
+        print(f"\n⚠️ 注意：转录部分完成！成功 {successful_chunks}/{total_chunks} 个音频块。将继续处理已成功的部分。")
+    else:
+        print(f"\n✅ 所有 {total_chunks} 个音频块均已成功转录！")
 
     # 步骤三：汇总并保存最终文字稿
-    if not all_transcripts:
-        print("所有音频块都未能成功转录，程序退出。")
-        return None
-
     print("\n--- 步骤 3: 正在汇总所有文字稿 ---")
     full_transcript = "\n\n".join(all_transcripts)
     
@@ -91,6 +107,11 @@ def process_transcript_with_dify(transcript_text: str):
 
 if __name__ == '__main__':
     try:
+        print("--- 正在检查外部依赖 (ffmpeg)... ---")
+        check_command_exists("ffmpeg")
+        check_command_exists("ffprobe")
+        print("依赖检查通过。")
+
         print("--- 大学生智能笔记 Agent 启动 ---")
 
         # 主流程：先生成文字稿

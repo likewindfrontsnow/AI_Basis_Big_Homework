@@ -1,0 +1,3 @@
+# .streamlit/config.toml
+[server]
+maxUploadSize = 2048
