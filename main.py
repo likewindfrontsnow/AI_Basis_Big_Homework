@@ -7,7 +7,7 @@ import shutil
 from openai import AuthenticationError
 from video_processor.splitter import split_media_to_audio_chunks_generator
 from video_processor.transcriber import transcribe_single_audio_chunk
-from dify_api_text import run_workflow_streaming
+from dify_api import run_workflow_streaming
 
 def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: str, output_filename: str):
     """
