@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 # 加载 .env 文件中的环境变量
 load_dotenv(override=True)
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DIFY_API_KEY = os.getenv("DIFY_API_KEY")
 FILE_PATH = os.getenv("FILE_PATH")
 OUTPUT_CHUNK_FOLDER = os.getenv("OUTPUT_CHUNK_FOLDER", "output_chunks")  
@@ -16,8 +15,6 @@ OUTPUT_VARIABLE_NAME = os.getenv("OUTPUT_VARIABLE_NAME", "final_output")
 LOCAL_SAVE_PATH = os.getenv("LOCAL_SAVE_PATH", "result.md")  
 
 
-if not OPENAI_API_KEY:
-    raise ValueError("错误：请在 .env 文件中设置您的 OPENAI_API_KEY")
 if not DIFY_API_KEY:
     raise ValueError("错误：请在 .env 文件中设置您的 DIFY_API_KEY")
 if not FILE_PATH:
