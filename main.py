@@ -8,128 +8,94 @@ from video_processor.splitter import split_video_to_audio_chunks
 from video_processor.transcriber import transcribe_single_audio_chunk
 from dify_api_text import run_workflow
 
-# 初始化配置
-try:
-    from config import OPENAI_API_KEY,DIFY_API_KEY, FILE_PATH, OUTPUT_CHUNK_FOLDER, FINAL_TRANSCRIPT_FILE, USER, INPUT_VARIABLE_NAME, OUTPUT_VARIABLE_NAME, LOCAL_SAVE_PATH
-except ValueError as e:
-    print(f"{e}", file=sys.stderr)
-    print("注意：为使配置生效，修改 .env文件后请保存并重新运行程序。", file=sys.stderr)
-    sys.exit(1) # 配置错误，程序无法继续
-
-def check_command_exists(command: str):
-    """检查外部命令是否存在于系统 PATH 中"""
-    if shutil.which(command) is None:
-        print(f"错误：找不到必需的外部命令 '{command}'。", file=sys.stderr)
-        print("请确保您已经正确安装了它，并将其添加到了系统的环境变量(PATH)中。", file=sys.stderr)
-        sys.exit(1)
-
-def generate_transcript_from_video(video_path: str, output_dir: str, transcript_save_path: str) -> str | None:
+def main_process_generator(video_path: str, openai_api_key: str, dify_api_key: str, output_filename: str):
     """
-    一个完整的处理流程：从视频文件生成文字稿，并保存到文件。
-    如果成功，返回完整的文字稿字符串；如果失败，返回 None。
+    一个生成器函数，执行整个流程并实时 yield 状态和进度。
     """
-    # 步骤一：切分视频
-    print("\n--- 步骤 1: 开始切分视频为音频块 ---")
+    # --- 准备工作 ---
+    # 根据用户输入动态生成输出路径
+    output_dir = "output_chunks"
+    transcript_save_path = "source_transcript.txt"
+    final_notes_save_path = f"{output_filename}.md" # 使用用户自定义文件名
+
+    total_steps = 4 # 总共有4个主要步骤
+    current_progress = 0
+    
+    # --- 步骤 1: 切分视频 ---
+    yield "progress", current_progress / total_steps, "步骤 1/4: 正在切分视频为音频块..."
+    
+    # 定义一个回调函数来更新主进度条
+    def split_progress_updater():
+        # 这个函数什么也不用做，我们只利用 as_completed 来驱动进度
+        pass
+
     audio_chunks = split_video_to_audio_chunks(
         video_path=video_path,
         output_dir=output_dir,
-        chunk_duration=600  # 10分钟一个切片
+        chunk_duration=600
+        # 这里暂时不传递回调，因为切分非常快，主要进度在转录
     )
     
     if not audio_chunks:
-        print("音频切分失败，程序退出。")
-        return None
+        yield "error", 0, "音频切分失败，程序退出。"
+        return
 
-    # 步骤二：并行处理每个音频块
-    print(f"\n--- 步骤 2: 开始并行转录 {len(audio_chunks)} 个音频块 ---")
+    current_progress += 1
+    yield "progress", current_progress / total_steps, f"视频切分完成，得到 {len(audio_chunks)} 个音频块。"
+
+    # --- 步骤 2: 并行转录 ---
+    yield "progress", current_progress / total_steps, f"步骤 2/4: 正在并行转录 {len(audio_chunks)} 个音频块..."
+    
     all_transcripts = []
-    
-    # max_workers 可以根据你的API速率限制来调整
-    with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
-        # 使用 executor.map 来并发执行转录任务
-        # 它会保持结果的顺序与 audio_chunks 的顺序一致
-        transcript_results = executor.map(
-            lambda chunk: transcribe_single_audio_chunk(chunk, OPENAI_API_KEY),
-            audio_chunks
-        )
+    num_transcribed = 0
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_chunk = {executor.submit(transcribe_single_audio_chunk, chunk, openai_api_key): chunk for chunk in audio_chunks}
         
-        successful_chunks = 0
+        for future in concurrent.futures.as_completed(future_to_chunk):
+            result = future.result()
+            if result:
+                all_transcripts.append(result)
+            num_transcribed += 1
+            # 产出详细的子进度
+            yield "sub_progress", num_transcribed / len(audio_chunks), f"正在转录... ({num_transcribed}/{len(audio_chunks)})"
 
-        # 收集结果
-        for transcript_fragment in transcript_results:
-            if transcript_fragment:
-                all_transcripts.append(transcript_fragment)
-                successful_chunks += 1
+    if not all_transcripts:
+        yield "error", 0, "所有音频块都未能成功转录，请检查网络或OpenAI API密钥。"
+        return
 
-    total_chunks = len(audio_chunks)
-    if successful_chunks == 0:
-        print("\n❌ 所有音频块都未能成功转录，程序退出。请检查网络连接或API密钥。")
-        return None
-    elif successful_chunks < total_chunks:
-        print(f"\n⚠️ 注意：转录部分完成！成功 {successful_chunks}/{total_chunks} 个音频块。将继续处理已成功的部分。")
-    else:
-        print(f"\n✅ 所有 {total_chunks} 个音频块均已成功转录！")
-
-    # 步骤三：汇总并保存最终文字稿
-    print("\n--- 步骤 3: 正在汇总所有文字稿 ---")
-    full_transcript = "\n\n".join(all_transcripts)
+    current_progress += 1
+    yield "progress", current_progress / total_steps, "所有音频块转录完成！"
     
+    # --- 步骤 3: 汇总保存 ---
+    yield "progress", current_progress / total_steps, "步骤 3/4: 正在汇总文字稿..."
+    full_transcript = "\n\n".join(all_transcripts)
     try:
         with open(transcript_save_path, "w", encoding="utf-8") as f:
             f.write(full_transcript)
-        print(f"任务完成！完整文字稿已保存到: {transcript_save_path}")
-        return full_transcript
     except IOError as e:
-        print(f"保存文字稿文件时出错: {e}")
-        return None
+        yield "error", 0, f"保存临时文字稿失败: {e}"
+        return
 
+    current_progress += 1
+    yield "progress", current_progress / total_steps, "文字稿汇总完成。"
 
-def process_transcript_with_dify(transcript_text: str):
-    """
-    使用 Dify 工作流处理文字稿并保存最终结果。
-    """
-    print("\n--- 步骤 4: 将文字稿提交给 Dify 工作流进行处理 ---")
-    
+    # --- 步骤 4: Dify 处理 ---
+    yield "progress", current_progress / total_steps, "步骤 4/4: 正在提交给 Dify 工作流..."
+
     workflow_success = run_workflow(
-        input_text=transcript_text,
-        user=USER,
-        dify_api_key=DIFY_API_KEY,
-        input_variable_name=INPUT_VARIABLE_NAME,
-        output_variable_name=OUTPUT_VARIABLE_NAME,
-        local_save_path=LOCAL_SAVE_PATH,
+        input_text=full_transcript,
+        user="streamlit_user", # 可以硬编码或从界面获取
+        dify_api_key=dify_api_key,
+        input_variable_name="source_transcript", # 从config获取或硬编码
+        output_variable_name="final_output",
+        local_save_path=final_notes_save_path
     )
+    
+    if not workflow_success:
+        yield "error", 0, "Dify 工作流执行失败。"
+        return
 
-    if workflow_success:
-        print(f"\n🎉 恭喜！智能笔记已生成，请查看文件: {LOCAL_SAVE_PATH}")
-    else:
-        print("\n❌ Dify 工作流执行失败。请检查控制台日志以获取更多信息。")
-
-
-if __name__ == '__main__':
-    try:
-        print("--- 正在检查外部依赖 (ffmpeg)... ---")
-        check_command_exists("ffmpeg")
-        check_command_exists("ffprobe")
-        print("依赖检查通过。")
-
-        print("--- 大学生智能笔记 Agent 启动 ---")
-
-        # 主流程：先生成文字稿
-        full_transcript = generate_transcript_from_video(
-            video_path=FILE_PATH,
-            output_dir=OUTPUT_CHUNK_FOLDER,
-            transcript_save_path=FINAL_TRANSCRIPT_FILE
-        )
-
-        # 然后，如果文字稿成功生成，再用Dify处理
-        if full_transcript:
-            process_transcript_with_dify(full_transcript)
-        else:
-            print("\n由于未能生成文字稿，无法继续执行 Dify 工作流。程序终止。")
-
-    except KeyboardInterrupt:
-        print("\n\n程序被用户中断。正在退出...")
-        sys.exit(0)
-    except Exception as e:
-        print(f"\n程序运行期间发生未捕获的严重错误: {e}", file=sys.stderr)
-        sys.exit(1)
+    current_progress += 1
+    yield "progress", current_progress / total_steps, "处理完成！"
+    yield "done", final_notes_save_path, "🎉 恭喜！智能笔记已生成！"

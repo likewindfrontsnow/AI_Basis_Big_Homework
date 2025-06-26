@@ -1,73 +1,91 @@
 # app.py
 import streamlit as st
 import os
-import time
-from main import generate_transcript_from_video, process_transcript_with_dify
-from config import OUTPUT_CHUNK_FOLDER, FINAL_TRANSCRIPT_FILE, LOCAL_SAVE_PATH
+from main import main_process_generator
+from config import DIFY_API_KEY # Dify Key 仍然从配置中读取
 
-# 设置页面标题和侧边栏
+# --- Streamlit 界面布局 ---
 st.set_page_config(page_title="智能笔记 Agent", layout="wide")
-st.title("👨‍💻 大学生智能笔记 Agent")
-st.markdown("上传您的视频课程，自动生成结构化笔记。")
+st.title("👨‍💻 视频课程智能笔记 Agent")
+st.markdown("上传您的视频课程，输入OpenAI API密钥，即可自动生成结构化笔记。")
 
-# --- 文件上传 ---
+# --- 用户输入区域 ---
+with st.sidebar:
+    st.header("⚙️ 参数配置")
+    
+    # 1. 用户输入 OpenAI API Key
+    openai_api_key = st.text_input("请输入您的 OpenAI API Key", type="password", help="您的密钥将仅用于本次处理，不会被保存。")
+    
+    # 2. 用户自定义输出文件名
+    output_filename = st.text_input("请输入希望的笔记文件名 (无需后缀)", value="我的学习笔记")
+
+    st.info("请在上方配置好参数后，上传视频文件开始处理。")
+
+# --- 文件上传与主逻辑 ---
 uploaded_file = st.file_uploader(
-    "选择一个视频文件 (mp4, mov, avi)", 
+    "上传一个视频文件 (mp4, mov, avi, mkv)", 
     type=['mp4', 'mov', 'avi', 'mkv']
 )
 
 if uploaded_file is not None:
-    # 保存上传的文件到临时位置
-    temp_dir = "temp_uploads"
-    if not os.path.exists(temp_dir):
-        os.makedirs(temp_dir)
+    # 检查用户是否已输入API Key
+    if not openai_api_key:
+        st.warning("请输入您的 OpenAI API Key 以继续。")
+    else:
+        # 显示开始按钮
+        if st.button("开始生成笔记", use_container_width=True, type="primary"):
+            # 保存上传的文件到临时位置
+            temp_dir = "temp_uploads"
+            if not os.path.exists(temp_dir):
+                os.makedirs(temp_dir)
+            temp_video_path = os.path.join(temp_dir, uploaded_file.name)
+            with open(temp_video_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
 
-    temp_video_path = os.path.join(temp_dir, uploaded_file.name)
-    with open(temp_video_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+            st.markdown("---")
+            st.subheader("处理进度")
+            
+            # 创建用于显示进度的元素
+            main_progress_bar = st.progress(0)
+            main_progress_text = st.empty()
+            sub_progress_bar = st.progress(0)
+            sub_progress_text = st.empty()
 
-    st.video(temp_video_path)
-
-    # --- 开始处理按钮 ---
-    if st.button("开始生成笔记", use_container_width=True):
-        with st.spinner("任务正在进行中，请稍候... 这可能需要几分钟时间。"):
-            st.info("步骤 1: 正在切分视频为音频块...")
-            # 注意：Streamlit 无法像桌面GUI一样实时打印日志
-            # 我们只能在每个主要步骤完成后显示状态更新
-            full_transcript = generate_transcript_from_video(
-                video_path=temp_video_path,
-                output_dir=OUTPUT_CHUNK_FOLDER,
-                transcript_save_path=FINAL_TRANSCRIPT_FILE
-            )
-
-            if full_transcript:
-                st.success("步骤 1 & 2 & 3: 视频切分和文字转录全部完成！")
-                st.info("步骤 4: 正在提交给 Dify 工作流进行最终处理...")
-
-                process_transcript_with_dify(full_transcript)
-
-                st.success("🎉 恭喜！智能笔记已生成！")
-
-                # 显示并提供下载最终的笔记文件
-                try:
-                    with open(LOCAL_SAVE_PATH, 'r', encoding='utf-8') as f:
-                        final_notes = f.read()
-                    st.markdown("---")
-                    st.subheader("生成的笔记内容预览")
-                    st.markdown(final_notes)
-
-                    st.download_button(
-                        label="下载笔记 (result.md)",
-                        data=final_notes,
-                        file_name="result.md",
-                        mime="text/markdown",
-                        use_container_width=True
-                    )
-                except FileNotFoundError:
-                    st.error("无法找到生成的笔记文件。")
-
-            else:
-                st.error("处理失败，未能从视频中生成文字稿。")
-
-        # 清理临时上传的文件
-        os.remove(temp_video_path)
+            final_result_path = None
+            
+            # --- 循环调用生成器，实时更新UI ---
+            for event_type, value, text in main_process_generator(temp_video_path, openai_api_key, DIFY_API_KEY, output_filename):
+                if event_type == "progress":
+                    main_progress_bar.progress(value)
+                    main_progress_text.info(text)
+                elif event_type == "sub_progress":
+                    sub_progress_bar.progress(value)
+                    sub_progress_text.text(text)
+                elif event_type == "error":
+                    st.error(text)
+                    break
+                elif event_type == "done":
+                    main_progress_bar.progress(1.0) # 确保主进度条满
+                    sub_progress_bar.empty() # 清空子进度条
+                    sub_progress_text.empty()
+                    st.success(text)
+                    final_result_path = value # 保存最终文件路径
+            
+            # --- 显示最终结果 ---
+            if final_result_path and os.path.exists(final_result_path):
+                st.markdown("---")
+                st.subheader("生成的笔记内容预览")
+                with open(final_result_path, 'r', encoding='utf-8') as f:
+                    final_notes = f.read()
+                st.markdown(final_notes)
+                
+                st.download_button(
+                    label=f"下载笔记 ({os.path.basename(final_result_path)})",
+                    data=final_notes,
+                    file_name=os.path.basename(final_result_path),
+                    mime="text/markdown",
+                    use_container_width=True
+                )
+            
+            # 清理临时文件
+            os.remove(temp_video_path)

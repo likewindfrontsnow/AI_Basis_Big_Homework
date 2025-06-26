@@ -56,7 +56,7 @@ def _process_chunk(args) -> str | None:
         print("错误：找不到 ffmpeg 命令。")
         return None
 
-def split_video_to_audio_chunks(video_path: str, output_dir: str, chunk_duration: int = 600) -> list[str]:
+def split_video_to_audio_chunks(video_path: str, output_dir: str, chunk_duration: int = 600,progress_callback=None) -> list[str]:
     """
     (并行版) 将长视频切分成多个固定时长的音频小块，返回所有音频块的文件路径列表。
     """
@@ -86,16 +86,17 @@ def split_video_to_audio_chunks(video_path: str, output_dir: str, chunk_duration
     output_files = []
     # 使用线程池执行并行任务
     # max_workers 可以根据你的CPU核心数来调整，None 表示使用默认值（通常是核心数*5）
-    # 对于CPU密集型任务，设置为 os.cpu_count() 通常是个不错的选择
     with concurrent.futures.ThreadPoolExecutor(max_workers=os.cpu_count()) as executor:
         # 使用 executor.map 来提交所有任务并保持结果的顺序
         # 它会自动处理参数的分发
-        results = executor.map(_process_chunk, tasks_args)
-        
-        # 收集所有成功生成的文件路径
-        for result in results:
+        future_to_args = {executor.submit(_process_chunk, args): args for args in tasks_args}
+        for future in concurrent.futures.as_completed(future_to_args):
+            result = future.result()
             if result:
                 output_files.append(result)
+            
+            if progress_callback:
+                progress_callback()
 
     if not output_files:
         print("--- 未能成功生成任何音频块。 ---")
