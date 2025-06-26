@@ -12,7 +12,7 @@ def get_media_duration(media_path: str) -> float | None:
         result = subprocess.run(command, check=True, capture_output=True, text=True)
         return float(result.stdout)
     except FileNotFoundError:
-        print("错误：找不到 ffprobe 命令。请确保 FFmpeg 已经安装并添加到了系统环境变量中。")
+        print("错误：找不到 'ffprobe' 命令。请确保 FFmpeg 已经完全安装，并且其 bin 目录已添加到了系统的 PATH 环境变量中。")
         return None
     except subprocess.CalledProcessError as e:
         print(f"ffprobe 执行失败，可能是文件已损坏或格式不支持: {e.stderr}")
@@ -47,7 +47,7 @@ def _process_chunk(args) -> str | None:
         print(f"处理第 {i+1} 个音频块时失败: {e.stderr}")
         raise e # Re-raise the exception to trigger the retry
     except FileNotFoundError:
-        print("错误：找不到 ffmpeg 命令。")
+        print("错误：找不到 'ffmpeg' 命令。请确保 FFmpeg 已经完全安装，并且其 bin 目录已添加到了系统的 PATH 环境变量中。")
         # This is a setup error, no point in retrying.
         return None
 
@@ -94,7 +94,7 @@ def split_media_to_audio_chunks_generator(media_path: str, output_dir: str, chun
                     output_files.append(result)
             except Exception as e:
                 # If a chunk fails after all retries, the exception is raised here.
-                yield 'error', f"关键错误：一个音频块在多次尝试后仍然无法处理，已停止。错误: {e}", None
+                yield 'error', f"一个音频块在多次尝试后仍然无法处理，已停止。错误: {e}", None
                 # Cancel remaining futures
                 executor.shutdown(wait=False, cancel_futures=True)
                 return

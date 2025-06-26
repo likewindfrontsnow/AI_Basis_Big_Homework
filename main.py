@@ -12,7 +12,7 @@ from dify_api_text import run_workflow_streaming
 def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: str, output_filename: str):
     """
     (更新版) 一个生成器函数，执行处理流程并实时产出状态、进度和LLM文本块。
-    - 新增了对持久性错误的捕获和处理。
+    - 新增了对持久性错误的捕获和处理，并提供对用户友好的错误日志。
     """
     output_dir = "output_chunks"
     final_notes_save_path = f"{output_filename}.md"
@@ -40,8 +40,8 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
                 final_llm_output_chunks.append(data)
                 yield "llm_chunk", data
             elif event_type == "error":
-                # This is now a persistent error after retries from dify_api_text
-                yield "persistent_error", 0, data
+                user_friendly_error = f"**笔记生成失败**\n\n看起来在与 Dify 服务通信时遇到了问题。这通常与 API Key 或网络有关。\n\n**原始错误信息:**\n`{data}`"
+                yield "persistent_error", 0, user_friendly_error
                 return
             elif event_type == "node_started":
                 yield "progress_text", f"Dify 节点 '{data}' 已开始..."
@@ -50,7 +50,7 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
         
         final_text = "".join(final_llm_output_chunks)
         if not final_text:
-            yield "persistent_error", 0, "处理失败：Dify 工作流在多次尝试后未返回任何内容。"
+            yield "persistent_error", 0, "**笔记生成失败**\n\nDify 工作流在多次尝试后，未返回任何有效内容。请检查您的 Dify 工作流配置以及输入文本是否过长或格式异常。"
             return
 
         try:
@@ -58,26 +58,26 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
                 f.write(final_text)
             yield "save_path", final_notes_save_path
         except IOError as e:
-            yield "persistent_error", 0, f"保存最终笔记文件失败: {e}"
+            user_friendly_error = f"**保存最终笔记文件失败**\n\n无法将生成的笔记写入本地文件。\n\n**可能原因:**\n- 程序没有在当前目录创建文件的权限。\n- 磁盘空间不足。\n\n**原始错误信息:**\n`{e}`"
+            yield "persistent_error", 0, user_friendly_error
             return
 
     # === 文本文件工作流 ===
     if file_ext in text_exts:
-        # ... (text workflow remains largely the same, but now uses run_dify_and_yield_results which has retries)
         total_steps = 2
         yield "progress", 0 / total_steps, "步骤 1/2: 正在读取文本文档..."
         try:
             with open(input_path, 'r', encoding='utf-8') as f:
                 full_transcript = f.read()
         except Exception as e:
-            yield "persistent_error", 0, f"读取文件失败: {e}"
+            user_friendly_error = f"**读取文件失败**\n\n无法读取您上传的文本文档 '{os.path.basename(input_path)}'。\n\n**可能原因:**\n- 文件已损坏或编码格式不是 UTF-8。\n- 程序没有读取该文件的权限。\n\n**原始错误信息:**\n`{e}`"
+            yield "persistent_error", 0, user_friendly_error
             return
         
         current_progress += 1
         yield "progress", current_progress / total_steps, "步骤 2/2: 正在提交给 Dify 工作流 (流式传输)..."
         
         final_path = None
-        # The generator now handles persistent errors internally
         dify_gen = run_dify_and_yield_results()
         for event_type, value, *rest in dify_gen:
             if event_type == "persistent_error":
@@ -114,11 +114,12 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
             elif event_type == 'result':
                 audio_chunks = val1
             elif event_type == 'error':
-                yield "persistent_error", 0, val1 # Now treat this as a persistent error
+                user_friendly_error = f"**媒体文件切分失败**\n\n无法处理您上传的媒体文件。这通常与 **FFmpeg** 配置或文件本身有关。\n\n**请检查:**\n1. **FFmpeg 是否已正确安装**: 确保 FFmpeg 已安装并在系统的环境变量 `PATH` 中。\n2. **文件是否完好**: 确认您的文件 `{os.path.basename(input_path)}` 没有损坏且格式受支持。\n\n**原始错误信息:**\n`{val1}`"
+                yield "persistent_error", 0, user_friendly_error
                 return
         
         if not audio_chunks:
-            yield "persistent_error", 0, f"{step_name}切分失败，请确保已安装 FFmpeg 且文件格式受支持。"
+            yield "persistent_error", 0, f"**{step_name}切分失败**\n\n未能从您的文件中提取出任何音频块。请确保文件时长不为零，且已正确安装 FFmpeg。"
             return
         
         yield "sub_progress", 1.0, f"✅ {step_name}切分全部完成！"
@@ -137,25 +138,26 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
                 }
                 for future in concurrent.futures.as_completed(future_to_index):
                     index = future_to_index[future]
-                    result = future.result() # This will raise an exception if retries fail
+                    result = future.result() 
                     if result is not None:
                         all_transcripts[index] = result
                     else:
-                         # This case should ideally not be hit if an exception is raised on failure
-                        raise Exception(f"Transcription for chunk {index} returned None.")
+                        raise Exception(f"转录任务未返回有效文本 (块索引: {index})。")
                     
                     num_transcribed += 1
                     yield "sub_progress", num_transcribed / len(audio_chunks), f"正在转录... ({num_transcribed}/{len(audio_chunks)})"
 
         except AuthenticationError as e:
-             yield "persistent_error", 0, f"OpenAI API 认证失败: {e}. 请检查您的 API 密钥。"
+             user_friendly_error = f"**OpenAI API 认证失败**\n\n您的 OpenAI API Key 无效。请在左侧边栏重新输入正确的密钥。\n\n**常见原因:**\n- 密钥拼写错误。\n- 密钥已过期或被禁用。\n- 账户余额不足。\n\n**原始错误信息:**\n`{e}`"
+             yield "persistent_error", 0, user_friendly_error
              return
         except Exception as e:
-            yield "persistent_error", 0, f"转录过程中发生无法恢复的错误: {e}"
+            user_friendly_error = f"**音频转录失败**\n\n在连接 OpenAI Whisper 服务进行语音转文字时发生无法恢复的错误。\n\n**可能原因:**\n1. **OpenAI 服务中断**: 可前往其官网查看服务状态。\n2. **网络连接问题**: 您的服务器可能无法访问 OpenAI API。\n3. **音频数据问题**: 某个音频块可能已损坏无法处理。\n\n**原始错误信息:**\n`{e}`"
+            yield "persistent_error", 0, user_friendly_error
             return
         
         if any(t is None for t in all_transcripts):
-            yield "persistent_error", 0, "部分音频块在多次尝试后仍转录失败。"
+            yield "persistent_error", 0, "**音频转录不完整**\n\n部分音频块在多次尝试后仍然转录失败。为确保笔记的完整性，处理已中止。"
             return
 
         yield "sub_progress", 1.0, "✅ 音频转录全部完成！"
@@ -194,5 +196,6 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
         return
         
     else:
-        yield "error", 0, f"错误：不支持的文件类型 '{file_ext}'。请上传支持的视频、音频或文本文档。"
+        user_friendly_error = f"**不支持的文件类型**\n\n您上传的文件类型 (`{file_ext}`) 当前不受支持。请参照上传框下的提示，上传指定格式的视频、音频或文本文档。"
+        yield "error", 0, user_friendly_error
         return
