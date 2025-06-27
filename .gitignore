@@ -1,8 +1,10 @@
-# Python 缓存文件
+# Python 缓存文件和虚拟环境
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+venv/
+.venv/
 
 # IDE 和操作系统产生的临时文件
 .idea/
@@ -15,5 +17,8 @@ Thumbs.db
 
 # 脚本生成的输出文件夹和文件
 output_chunks/
+temp_uploads/
 source_transcript.txt
-result.md
+
+# 最终生成的笔记文件 (匹配所有.md结尾的文件)
+*.md
