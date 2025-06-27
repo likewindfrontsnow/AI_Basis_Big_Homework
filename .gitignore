@@ -12,9 +12,6 @@ venv/
 .DS_Store
 Thumbs.db
 
-# 敏感的环境变量文件
-.env
-
 # 脚本生成的输出文件夹和文件
 output_chunks/
 temp_uploads/
