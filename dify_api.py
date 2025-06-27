@@ -1,14 +1,15 @@
-# dify_api_text.py
+# dify_api.py
 import requests
 import os
 import json
 import time
 
-def run_workflow_streaming(input_text: str, user: str, dify_api_key: str, input_variable_name: str, max_retries=3, delay=3):
+def run_workflow_streaming(input_text: str, query: str, user: str, dify_api_key: str, max_retries=3, delay=3):
     """
     (生成器版本) 运行Dify工作流并以事件流的形式产出结果。
     - 包含重试逻辑，用于处理网络请求错误。
     - 产出事件: ('text_chunk', 数据), ('workflow_finished', None), ('node_started', 节点标题), ('error', 错误信息)
+    - 新增产出事件: ('classification_result', 分类结果)
     """
     workflow_url = "https://api.dify.ai/v1/workflows/run"
     headers = {
@@ -17,7 +18,8 @@ def run_workflow_streaming(input_text: str, user: str, dify_api_key: str, input_
     }
     data = {
         "inputs": {
-            input_variable_name: input_text
+            "source_transcript": input_text,
+            "query": query
         },
         "response_mode": "streaming",
         "user": user,
@@ -44,8 +46,24 @@ def run_workflow_streaming(input_text: str, user: str, dify_api_key: str, input_
                     event = event_data.get('event')
 
                     if event == 'node_started':
-                        node_title = event_data.get('data', {}).get('title', '未知节点')
+                        node_data = event_data.get('data', {})
+                        node_title = node_data.get('title', '未知节点')
                         yield 'node_started', node_title
+                    
+                    # --- MODIFIED: 正确处理分类结果 ---
+                    # 当分类节点（LLM_SORT_NOTES）执行完毕后，捕获其输出
+                    elif event == 'node_finished':
+                        node_data = event_data.get('data', {})
+                        node_title = node_data.get('title')
+                        # 根据 .yml 文件，分类节点的标题是 LLM_SORT_NOTES
+                        if node_title == 'LLM_SORT_NOTES':
+                            outputs = node_data.get('outputs', {})
+                            # 分类结果存储在 'text' 输出变量中
+                            classification = outputs.get('text')
+                            if classification:
+                                # 清理可能存在的多余空格或换行符
+                                yield 'classification_result', classification.strip()
+
                     elif event == 'text_chunk':
                         text_chunk = event_data.get('data', {}).get('text', '')
                         yield 'text_chunk', text_chunk
@@ -57,8 +75,6 @@ def run_workflow_streaming(input_text: str, user: str, dify_api_key: str, input_
                             yield 'error', f"Dify 工作流失败: {error_msg}"
                         return
                     elif event == 'error':
-                        # This is an error reported by the Dify API itself (e.g., bad input)
-                        # It's unlikely to be resolved by retrying the request.
                         yield 'error', f"Dify API 返回错误: {event_data.get('message', '未知API错误')}"
                         return
 
@@ -66,7 +82,6 @@ def run_workflow_streaming(input_text: str, user: str, dify_api_key: str, input_
                     yield 'error', f"无法解析从Dify API收到的数据行: {json_str}"
                     continue
             
-            # If the loop completes successfully, exit the retry loop
             return
 
         except requests.exceptions.RequestException as e:
@@ -83,6 +98,5 @@ def run_workflow_streaming(input_text: str, user: str, dify_api_key: str, input_
             time.sleep(delay)
         
         except Exception as e:
-            # Catch any other unexpected errors
             yield 'error', f"运行工作流时发生未知错误: {e}"
             return

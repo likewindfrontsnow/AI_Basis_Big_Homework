@@ -9,7 +9,7 @@ from video_processor.splitter import split_media_to_audio_chunks_generator
 from video_processor.transcriber import transcribe_single_audio_chunk
 from dify_api import run_workflow_streaming
 
-def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: str, output_filename: str):
+def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: str, output_filename: str, query: str):
     """
     (更新版) 一个生成器函数，执行处理流程并实时产出状态、进度和LLM文本块。
     - 新增了对持久性错误的捕获和处理，并提供对用户友好的错误日志。
@@ -30,15 +30,27 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
         final_llm_output_chunks = []
         dify_generator = run_workflow_streaming(
             input_text=full_transcript,
+            query=query,
             user="streamlit_user",
-            dify_api_key=dify_api_key,
-            input_variable_name="source_transcript"
+            dify_api_key=dify_api_key
         )
         
         for event_type, data in dify_generator:
             if event_type == "text_chunk":
                 final_llm_output_chunks.append(data)
                 yield "llm_chunk", data
+            
+            elif event_type == "classification_result":
+                # --- START of CORRECTION ---
+                # (已修正) 根据最新的 .yml 文件，只保留 STEM 和 HASS 的分类逻辑
+                category_map = {
+                    "NOTES_STEM": "这是一个理工科 (STEM) 领域的笔记",
+                    "NOTES_HASS": "这是一个⼈文社科 (HASS) 领域的笔记",
+                }
+                # --- END of CORRECTION ---
+                friendly_text = category_map.get(data, f"无法识别笔记领域，将使用默认模板。识别码: {data}")
+                yield "display_classification", friendly_text
+                
             elif event_type == "error":
                 user_friendly_error = f"**笔记生成失败**\n\n看起来在与 Dify 服务通信时遇到了问题。这通常与 API Key 或网络有关。\n\n**原始错误信息:**\n`{data}`"
                 yield "persistent_error", 0, user_friendly_error
@@ -49,6 +61,23 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
                 break
         
         final_text = "".join(final_llm_output_chunks)
+        
+        # 根据 YML 设计，如果最终输出与输入 query 相同，说明工作流走入了错误的默认分支。
+        if final_text.strip() == query:
+            error_message = ""
+            if query == "Notes":
+                # 这种情况对应 YML 中 "条件分支 2" 的 false 分支，即笔记类型无法被分类为 STEM 或 HASS
+                error_message = "**笔记生成失败**\n\n无法自动识别笔记的领域 (例如理工科/人文社科)。工作流已终止，因为它无法选择合适的笔记模板。"
+            else:
+                # 这种情况对应 YML 中 "条件分支" 的 false 分支，即用户选择的操作不是 'Notes', 'Q&A', 或 'Quiz'
+                error_message = f"**无效的操作类型**\n\n请求的操作 '{query}' 不是一个有效的选项 ('Notes', 'Q&A', 'Quiz')。工作流已终止。"
+            yield "persistent_error", 0, error_message
+            return
+        
+        # 清洗最终文本，去除可能的<think>标签
+        if "</think>" in final_text:
+            final_text = final_text.split("</think>")[-1].strip()
+
         if not final_text:
             yield "persistent_error", 0, "**笔记生成失败**\n\nDify 工作流在多次尝试后，未返回任何有效内容。请检查您的 Dify 工作流配置以及输入文本是否过长或格式异常。"
             return
@@ -83,6 +112,8 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
             if event_type == "persistent_error":
                 yield event_type, value, rest[0]
                 return
+            elif event_type == "display_classification":
+                yield event_type, value
             elif event_type == "llm_chunk":
                 yield event_type, value
             elif event_type == "progress_text":
@@ -165,10 +196,18 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
         yield "progress", current_progress / total_steps, "所有音频块转录完成！"
         shutil.rmtree(output_dir, ignore_errors=True)
 
+        # 汇总文字稿并保存到 source_transcript.txt
         if is_video:
-            yield "progress", current_progress / total_steps, f"步骤 {current_progress + 1}/{total_steps}: 正在汇总文字稿..."
+            yield "progress", current_progress / total_steps, f"步骤 {current_progress + 1}/{total_steps}: 正在汇总文字稿并保存..."
         
         full_transcript = "\n\n".join(filter(None, all_transcripts))
+        
+        transcript_save_path = "source_transcript.txt"
+        try:
+            with open(transcript_save_path, 'w', encoding='utf-8') as f:
+                f.write(full_transcript)
+        except IOError as e:
+            yield "error", 0, f"无法保存文字稿文件: {e}"
 
         if is_video:
             current_progress += 1
@@ -182,6 +221,8 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
             if event_type == "persistent_error":
                 yield event_type, value, rest[0]
                 return
+            elif event_type == "display_classification":
+                yield event_type, value
             elif event_type == "llm_chunk":
                 yield event_type, value
             elif event_type == "progress_text":
