@@ -12,7 +12,8 @@ from dify_api import run_workflow_streaming
 def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: str, output_filename: str, query: str):
     """
     (更新版) 一个生成器函数，执行处理流程并实时产出状态、进度和LLM文本块。
-    - 新增了对持久性错误的捕获和处理，并提供对用户友好的错误日志。
+    - 新增了对持久性错误的捕护和处理，并提供对用户友好的错误日志。
+    - (已修改) 适配包含安全审查的新版 Dify 工作流。
     """
     output_dir = "output_chunks"
     final_notes_save_path = f"{output_filename}.md"
@@ -25,9 +26,13 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
     current_progress = 0
     full_transcript = ""
 
+    # --- START of MODIFICATION ---
+    # (已重写) 重写此辅助函数以处理新的安全审查逻辑和更复杂的工作流分支
     def run_dify_and_yield_results():
-        """辅助生成器：运行Dify工作流并处理事件。"""
+        """辅助生成器：运行Dify工作流并处理事件（已适配安全审查流程）。"""
         final_llm_output_chunks = []
+        final_outputs = None  # 用于捕获工作流结束时的最终输出
+
         dify_generator = run_workflow_streaming(
             input_text=full_transcript,
             query=query,
@@ -41,13 +46,10 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
                 yield "llm_chunk", data
             
             elif event_type == "classification_result":
-                # --- START of CORRECTION ---
-                # (已修正) 根据最新的 .yml 文件，只保留 STEM 和 HASS 的分类逻辑
                 category_map = {
                     "NOTES_STEM": "这是一个理工科 (STEM) 领域的笔记",
                     "NOTES_HASS": "这是一个⼈文社科 (HASS) 领域的笔记",
                 }
-                # --- END of CORRECTION ---
                 friendly_text = category_map.get(data, f"无法识别笔记领域，将使用默认模板。识别码: {data}")
                 yield "display_classification", friendly_text
                 
@@ -55,26 +57,45 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
                 user_friendly_error = f"**笔记生成失败**\n\n看起来在与 Dify 服务通信时遇到了问题。这通常与 API Key 或网络有关。\n\n**原始错误信息:**\n`{data}`"
                 yield "persistent_error", 0, user_friendly_error
                 return
+
             elif event_type == "node_started":
                 yield "progress_text", f"Dify 节点 '{data}' 已开始..."
+
             elif event_type == "workflow_finished":
+                final_outputs = data  # 捕获最终输出的字典
                 break
         
-        final_text = "".join(final_llm_output_chunks)
+        # 工作流已结束，现在分析最终结果
+        final_text_from_chunks = "".join(final_llm_output_chunks)
         
-        # 根据 YML 设计，如果最终输出与输入 query 相同，说明工作流走入了错误的默认分支。
-        if final_text.strip() == query:
+        # 从工作流的最终输出变量 'final_output' 中获取值
+        final_output_value = final_outputs.get('final_output', '').strip() if final_outputs else ""
+
+        # 1. 优先检查安全警告
+        if final_output_value == 'INJECTION_DETECTED':
+            error_message = "**安全警告：检测到指令注入攻击**\n\n您的输入中可能包含试图操控系统行为的指令。为安全起见，处理已终止。"
+            yield "persistent_error", 0, error_message
+            return
+
+        if final_output_value == 'SENSITIVE_CONTENT_DETECTED':
+            error_message = "**内容警告：检测到不当敏感内容**\n\n您的输入中可能包含不适宜的词汇。为遵守社区准则，处理已终止。"
+            yield "persistent_error", 0, error_message
+            return
+        
+        # 2. 检查设计好的回退分支（例如，查询无效或分类失败）
+        # 在这些情况下，工作流会将原始 query 作为 final_output 返回
+        if final_output_value == query:
             error_message = ""
             if query == "Notes":
-                # 这种情况对应 YML 中 "条件分支 2" 的 false 分支，即笔记类型无法被分类为 STEM 或 HASS
                 error_message = "**笔记生成失败**\n\n无法自动识别笔记的领域 (例如理工科/人文社科)。工作流已终止，因为它无法选择合适的笔记模板。"
             else:
-                # 这种情况对应 YML 中 "条件分支" 的 false 分支，即用户选择的操作不是 'Notes', 'Q&A', 或 'Quiz'
                 error_message = f"**无效的操作类型**\n\n请求的操作 '{query}' 不是一个有效的选项 ('Notes', 'Q&A', 'Quiz')。工作流已终止。"
             yield "persistent_error", 0, error_message
             return
         
-        # 清洗最终文本，去除可能的<think>标签
+        # 3. 如果没有触发特定错误，则最终内容为流式输出的文本
+        final_text = final_text_from_chunks
+        
         if "</think>" in final_text:
             final_text = final_text.split("</think>")[-1].strip()
 
@@ -90,6 +111,9 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
             user_friendly_error = f"**保存最终笔记文件失败**\n\n无法将生成的笔记写入本地文件。\n\n**可能原因:**\n- 程序没有在当前目录创建文件的权限。\n- 磁盘空间不足。\n\n**原始错误信息:**\n`{e}`"
             yield "persistent_error", 0, user_friendly_error
             return
+
+    # --- END of MODIFICATION ---
+
 
     # === 文本文件工作流 ===
     if file_ext in text_exts:
@@ -107,6 +131,7 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
         yield "progress", current_progress / total_steps, "步骤 2/2: 正在提交给 Dify 工作流 (流式传输)..."
         
         final_path = None
+        # 使用已修改的辅助函数
         dify_gen = run_dify_and_yield_results()
         for event_type, value, *rest in dify_gen:
             if event_type == "persistent_error":
@@ -196,7 +221,6 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
         yield "progress", current_progress / total_steps, "所有音频块转录完成！"
         shutil.rmtree(output_dir, ignore_errors=True)
 
-        # 汇总文字稿并保存到 source_transcript.txt
         if is_video:
             yield "progress", current_progress / total_steps, f"步骤 {current_progress + 1}/{total_steps}: 正在汇总文字稿并保存..."
         
@@ -216,6 +240,7 @@ def main_process_generator(input_path: str, openai_api_key: str, dify_api_key: s
         yield "progress", current_progress / total_steps, f"步骤 {current_progress + 1}/{total_steps}: 正在提交给 Dify 工作流 (流式传输)..."
 
         final_path = None
+        # 使用已修改的辅助函数
         dify_gen = run_dify_and_yield_results()
         for event_type, value, *rest in dify_gen:
             if event_type == "persistent_error":

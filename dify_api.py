@@ -8,7 +8,7 @@ def run_workflow_streaming(input_text: str, query: str, user: str, dify_api_key:
     """
     (生成器版本) 运行Dify工作流并以事件流的形式产出结果。
     - 包含重试逻辑，用于处理网络请求错误。
-    - 产出事件: ('text_chunk', 数据), ('workflow_finished', None), ('node_started', 节点标题), ('error', 错误信息)
+    - 产出事件: ('text_chunk', 数据), ('workflow_finished', 最终输出), ('node_started', 节点标题), ('error', 错误信息)
     - 新增产出事件: ('classification_result', 分类结果)
     """
     workflow_url = "https://api.dify.ai/v1/workflows/run"
@@ -50,30 +50,30 @@ def run_workflow_streaming(input_text: str, query: str, user: str, dify_api_key:
                         node_title = node_data.get('title', '未知节点')
                         yield 'node_started', node_title
                     
-                    # --- MODIFIED: 正确处理分类结果 ---
-                    # 当分类节点（LLM_SORT_NOTES）执行完毕后，捕获其输出
                     elif event == 'node_finished':
                         node_data = event_data.get('data', {})
                         node_title = node_data.get('title')
-                        # 根据 .yml 文件，分类节点的标题是 LLM_SORT_NOTES
                         if node_title == 'LLM_SORT_NOTES':
                             outputs = node_data.get('outputs', {})
-                            # 分类结果存储在 'text' 输出变量中
                             classification = outputs.get('text')
                             if classification:
-                                # 清理可能存在的多余空格或换行符
                                 yield 'classification_result', classification.strip()
 
                     elif event == 'text_chunk':
                         text_chunk = event_data.get('data', {}).get('text', '')
                         yield 'text_chunk', text_chunk
                     elif event == 'workflow_finished':
-                        if event_data.get('data', {}).get('status') == 'succeeded':
-                            yield 'workflow_finished', None
+                        # --- START of MODIFICATION ---
+                        # (已修改) 当工作流成功结束时，返回其最终输出的 payload，
+                        # 而不仅仅是 None。这对于捕获安全审查结果至关重要。
+                        data = event_data.get('data', {})
+                        if data.get('status') == 'succeeded':
+                            yield 'workflow_finished', data.get('outputs', {})
                         else:
-                            error_msg = event_data.get('data', {}).get('error', '未知工作流错误')
+                            error_msg = data.get('error', '未知工作流错误')
                             yield 'error', f"Dify 工作流失败: {error_msg}"
                         return
+                        # --- END of MODIFICATION ---
                     elif event == 'error':
                         yield 'error', f"Dify API 返回错误: {event_data.get('message', '未知API错误')}"
                         return
