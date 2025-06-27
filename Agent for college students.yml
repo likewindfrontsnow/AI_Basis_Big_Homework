@@ -205,30 +205,6 @@ workflow:
         isInLoop: false
         sourceType: llm
         targetType: llm
-      id: 1751004391900-source-1751015740184-target
-      source: '1751004391900'
-      sourceHandle: source
-      target: '1751015740184'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInIteration: false
-        isInLoop: false
-        sourceType: llm
-        targetType: end
-      id: 1751015740184-source-1751004416807-target
-      source: '1751015740184'
-      sourceHandle: source
-      target: '1751004416807'
-      targetHandle: target
-      type: custom
-      zIndex: 0
-    - data:
-        isInIteration: false
-        isInLoop: false
-        sourceType: llm
-        targetType: llm
       id: 1751004582273-source-1751015904401-target
       source: '1751004582273'
       sourceHandle: source
@@ -304,6 +280,17 @@ workflow:
       source: '1751016325280'
       sourceHandle: 8eea7ed4-f99f-4667-a737-140cb46d2a3f
       target: '1751016794408'
+      targetHandle: target
+      type: custom
+      zIndex: 0
+    - data:
+        isInLoop: false
+        sourceType: llm
+        targetType: end
+      id: 1751004391900-source-1751004416807-target
+      source: '1751004391900'
+      sourceHandle: source
+      target: '1751004416807'
       targetHandle: target
       type: custom
       zIndex: 0
@@ -659,7 +646,7 @@ workflow:
         desc: ''
         outputs:
         - value_selector:
-          - '1751015740184'
+          - '1751004391900'
           - text
           variable: final_output
         selected: false
@@ -668,12 +655,12 @@ workflow:
       height: 89
       id: '1751004416807'
       position:
-        x: 2484.6586581844685
-        y: 27.068386318838037
+        x: 2033.4062789691693
+        y: 20.805938511770677
       positionAbsolute:
-        x: 2484.6586581844685
-        y: 27.068386318838037
-      selected: false
+        x: 2033.4062789691693
+        y: 20.805938511770677
+      selected: true
       sourcePosition: right
       targetPosition: left
       type: custom
@@ -911,54 +898,6 @@ workflow:
         context:
           enabled: true
           variable_selector:
-          - '1751004391900'
-          - text
-        desc: ''
-        model:
-          completion_params:
-            temperature: 0.7
-          mode: chat
-          name: Pro/deepseek-ai/DeepSeek-R1
-          provider: langgenius/siliconflow/siliconflow
-        prompt_template:
-        - role: system
-          text: "# 角色\n你是一位极其严谨、注重细节的学术笔记审查员和LaTeX技术专家。你的唯一目标是确保一份Markdown文档在技术上是完美无瑕的，能够被任何标准的Markdown转PDF工具（特别是Pandoc）正确无误地解析和渲染。\n\
-            \n# 核心任务\n审查并修正一份由AI初步生成的Markdown讲义草稿。你的工作不是重新创作，而是像代码审查（Code Review）一样，找出并修复所有格式、语法和兼容性问题。\n\
-            \n# 输入\n一份Markdown格式的讲义草稿{{#1751004391900.text#}}\n\n# 审查与修正规则 (必须严格遵守)\n\
-            \n1.  **【最重要的】LaTeX命令正确性审查：**\n    * **验证每一个命令**：仔细检查文中的所有LaTeX命令（`$...$`\
-            \ 和 `$$...$$` 内的内容）。\n    * **杜绝虚构命令**：必须识别并修正所有虚构、不存在的LaTeX命令（例如，错误的\
-            \ `\\leftmoon`）。如果需要表示特定天体，必须用通用的、无需特殊宏包的字母来代替（例如，用 `M_L` 或 `M_{moon}`\
-            \ 代表月球质量，用 `M_\\oplus` 代表地球质量）。\n    * **确保基础性**：所有使用的命令都应是LaTeX标准库或最常用的宏包（如\
-            \ `amsmath`）所支持的，避免使用冷门或需要特殊配置的命令。\n\n2.  **【最重要的】环境兼容性审查：**\n    * **严格禁止绘图环境**：必须识别并**彻底移除**任何LaTeX绘图环境代码，特别是\
-            \ `tikzpicture`, `PSTricks` 等。\n    * **统一替换为占位符**：将所有被移除的绘图代码块，统一替换为清晰的文字占位符，格式必须为\
-            \ `[图X：图表的中文描述]`。例如：`[图1：地球内部圈层结构示意图]`。\n\n3.  **Markdown语法审查：**\n   \
-            \ * **表格格式**：检查Markdown表格的格式是否标准（`|` 和 `-` 的使用），确保其能够被正确渲染。\n    * **标题层级**：检查标题（`#`,\
-            \ `##`, `###`）的使用是否连贯、有逻辑。\n    * **引用和列表**：确保引用（`>`）和列表（`-` 或 `*`）的格式正确无误。\n\
-            \n4.  **内容忠实性原则：**\n    * 你的修正**仅限于技术和格式层面**。\n    * **不要**改动原文的科学观点、数据、公式的内在逻辑和论述。你的职责是让它能“正确显示”，而不是判断它在科学上是否“正确”。\n\
-            \n# 输出格式\n直接输出经过你审查和修正后的**完整Markdown文本**。**不要添加任何“这是修正后的版本”、“我已为您修正了以下几点”之类的开场白或总结**。最终输出的文本必须是“即用型”（Ready-to-use），用户可以直接完整复制并粘贴到.md文件中，用于生成PDF。"
-        selected: false
-        title: LLM_NOTE_REVIEWER2
-        type: llm
-        variables: []
-        vision:
-          enabled: false
-      height: 89
-      id: '1751015740184'
-      position:
-        x: 2088.447165722212
-        y: 20.805938511770677
-      positionAbsolute:
-        x: 2088.447165722212
-        y: 20.805938511770677
-      selected: false
-      sourcePosition: right
-      targetPosition: left
-      type: custom
-      width: 244
-    - data:
-        context:
-          enabled: true
-          variable_selector:
           - '1751004582273'
           - text
         desc: ''
@@ -1043,7 +982,7 @@ workflow:
       positionAbsolute:
         x: -635.967885126784
         y: 51.00228780753122
-      selected: true
+      selected: false
       sourcePosition: right
       targetPosition: left
       type: custom
@@ -1147,6 +1086,6 @@ workflow:
       type: custom
       width: 244
     viewport:
-      x: 705.2454227968417
-      y: 259.12092674727455
+      x: -801.7545772031583
+      y: 220.12092674727452
       zoom: 0.6426558913756701
