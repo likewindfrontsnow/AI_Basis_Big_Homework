@@ -465,6 +465,7 @@ workflow:
     - data:
         dataset_ids:
         - J0P+a2klfKGvR3OB5LpjdeE6VkU+BU1svZzOOFc2LM+bAkdUICYjf+m+fyPy8Vjv
+        - H79XP/WUoCpTq4TjGg9FSdHSszTyoIG9I5LqiaBiBpRiNUDhYMus0t9gfglLhJwQ
         desc: ''
         multiple_retrieval_config:
           reranking_enable: true
@@ -477,10 +478,10 @@ workflow:
         - '1750859220852'
         - query
         retrieval_mode: multiple
-        selected: false
+        selected: true
         title: 知识检索
         type: knowledge-retrieval
-      height: 91
+      height: 119
       id: '1750960446774'
       position:
         x: 806.2373158714144
@@ -488,7 +489,7 @@ workflow:
       positionAbsolute:
         x: 806.2373158714144
         y: 159.75048745395236
-      selected: false
+      selected: true
       sourcePosition: right
       targetPosition: left
       type: custom
@@ -660,7 +661,7 @@ workflow:
       positionAbsolute:
         x: 2033.4062789691693
         y: 20.805938511770677
-      selected: true
+      selected: false
       sourcePosition: right
       targetPosition: left
       type: custom
@@ -1086,6 +1087,6 @@ workflow:
       type: custom
       width: 244
     viewport:
-      x: -801.7545772031583
-      y: 220.12092674727452
+      x: -343.75457720315796
+      y: 127.12092674727452
       zoom: 0.6426558913756701
