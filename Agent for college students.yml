@@ -66,6 +66,7 @@ workflow:
         sourceType: llm
         targetType: end
       id: 1750960472453-source-1750960563692-target
+      selected: false
       source: '1750960472453'
       sourceHandle: source
       target: '1750960563692'
@@ -77,6 +78,7 @@ workflow:
         sourceType: if-else
         targetType: knowledge-retrieval
       id: 1750959843194-efe1e935-7676-4b34-93e0-45a78f47b03d-1750960446774-target
+      selected: false
       source: '1750959843194'
       sourceHandle: efe1e935-7676-4b34-93e0-45a78f47b03d
       target: '1750960446774'
@@ -89,6 +91,7 @@ workflow:
         sourceType: if-else
         targetType: end
       id: 1750959843194-false-1751004247915-target
+      selected: false
       source: '1750959843194'
       sourceHandle: 'false'
       target: '1751004247915'
@@ -100,6 +103,7 @@ workflow:
         sourceType: knowledge-retrieval
         targetType: llm
       id: 1750960446774-source-1750960472453-target
+      selected: false
       source: '1750960446774'
       sourceHandle: source
       target: '1750960472453'
@@ -112,6 +116,7 @@ workflow:
         sourceType: if-else
         targetType: llm
       id: 1750959843194-a8e22949-fe24-4f71-958d-77b2aebf525b-1751004582273-target
+      selected: false
       source: '1750959843194'
       sourceHandle: a8e22949-fe24-4f71-958d-77b2aebf525b
       target: '1751004582273'
@@ -124,6 +129,7 @@ workflow:
         sourceType: if-else
         targetType: llm
       id: 1750959843194-true-1751005040735-target
+      selected: false
       source: '1750959843194'
       sourceHandle: 'true'
       target: '1751005040735'
@@ -136,6 +142,7 @@ workflow:
         sourceType: llm
         targetType: if-else
       id: 1751005040735-source-1751005192292-target
+      selected: false
       source: '1751005040735'
       sourceHandle: source
       target: '1751005192292'
@@ -147,6 +154,7 @@ workflow:
         sourceType: if-else
         targetType: llm
       id: 1751005192292-true-1750859228099-target
+      selected: false
       source: '1751005192292'
       sourceHandle: 'true'
       target: '1750859228099'
@@ -158,6 +166,7 @@ workflow:
         sourceType: if-else
         targetType: llm
       id: 1751005192292-856fb953-2cd7-40e9-bf43-95dbdc8162b2-1751004391900-target
+      selected: false
       source: '1751005192292'
       sourceHandle: 856fb953-2cd7-40e9-bf43-95dbdc8162b2
       target: '1751004391900'
@@ -170,6 +179,7 @@ workflow:
         sourceType: if-else
         targetType: end
       id: 1751005192292-false-1751013201792-target
+      selected: false
       source: '1751005192292'
       sourceHandle: 'false'
       target: '1751013201792'
@@ -182,6 +192,7 @@ workflow:
         sourceType: llm
         targetType: llm
       id: 1750859228099-source-1751015680829-target
+      selected: false
       source: '1750859228099'
       sourceHandle: source
       target: '1751015680829'
@@ -194,6 +205,7 @@ workflow:
         sourceType: llm
         targetType: end
       id: 1751015680829-source-1750859966098-target
+      selected: false
       source: '1751015680829'
       sourceHandle: source
       target: '1750859966098'
@@ -206,6 +218,7 @@ workflow:
         sourceType: start
         targetType: llm
       id: 1750859220852-source-1751016042181-target
+      selected: false
       source: '1750859220852'
       sourceHandle: source
       target: '1751016042181'
@@ -218,6 +231,7 @@ workflow:
         sourceType: llm
         targetType: if-else
       id: 1751016042181-source-1751016325280-target
+      selected: false
       source: '1751016042181'
       sourceHandle: source
       target: '1751016325280'
@@ -229,6 +243,7 @@ workflow:
         sourceType: if-else
         targetType: if-else
       id: 1751016325280-0681d887-61eb-4e00-8e66-52680a225c91-1750959843194-target
+      selected: false
       source: '1751016325280'
       sourceHandle: 0681d887-61eb-4e00-8e66-52680a225c91
       target: '1750959843194'
@@ -241,6 +256,7 @@ workflow:
         sourceType: if-else
         targetType: end
       id: 1751016325280-true-1751016778897-target
+      selected: false
       source: '1751016325280'
       sourceHandle: 'true'
       target: '1751016778897'
@@ -253,6 +269,7 @@ workflow:
         sourceType: if-else
         targetType: end
       id: 1751016325280-8eea7ed4-f99f-4667-a737-140cb46d2a3f-1751016794408-target
+      selected: false
       source: '1751016325280'
       sourceHandle: 8eea7ed4-f99f-4667-a737-140cb46d2a3f
       target: '1751016794408'
@@ -264,6 +281,7 @@ workflow:
         sourceType: llm
         targetType: end
       id: 1751004391900-source-1751004416807-target
+      selected: false
       source: '1751004391900'
       sourceHandle: source
       target: '1751004416807'
@@ -275,6 +293,7 @@ workflow:
         sourceType: llm
         targetType: end
       id: 1751004582273-source-1751004673126-target
+      selected: false
       source: '1751004582273'
       sourceHandle: source
       target: '1751004673126'
@@ -329,8 +348,8 @@ workflow:
         - id: ff754c78-be47-4e88-9def-f02fc973d10c
           role: system
           text: "# 角色 (Role)\n你是一位深受学生欢迎的大学教师，擅长深入浅出，趣味严谨并重的讲解课程。你正在为一门高级课程（如统计学、数学或计算机科学）撰写一套专业的中文讲义\
-            \ (Lecture Notes)。你的写作风格严谨、清晰、富有条理，逻辑严密，并且精通使用 Markdown 和 LaTeX 进行数学排版。\n\
-            \n# 核心任务 (Core Task)\n将用户提供的、通常是口语化的、非结构化的课程录音文字稿{{#1750859220852.source_transcript#}}，转换成一份结构严谨、格式专业、内容详尽的\
+            \ (Lecture Notes)。你的写作风格严谨、清晰、富有条理，逻辑严密，并且精通使用 Markdown 和进行数学排版。\n\n#\
+            \ 核心任务 (Core Task)\n将用户提供的、通常是口语化的、非结构化的课程录音文字稿{{#1750859220852.source_transcript#}}，转换成一份结构严谨、格式专业、内容详尽的\
             \ Markdown 讲义。其最终风格和结构必须严格模仿一份顶级课程讲义，要求深入浅出，严谨的推导和直观的解释相结合。直接从一级标题开始生成。\n\
             \n# 工作流程与原则 (Workflow & Principles)\n\n1.  **规划讲义结构 (Plan the Structure):**\n\
             \    - 首先，通读并完全理解文字稿的全部内容。\n    - 然后，为讲义规划出清晰的、带编号的章节结构。\n\n2.  **识别并格式化关键模块\
@@ -342,8 +361,7 @@ workflow:
             \      > **评注**\n      > [此处为评注内容...]\n      > **证明**\n     [此处为证明内容]\n\
             3.  **语言重述 (Academic Restatement):**\n    - 必须保留完整的动机，对于录音稿中的解释，动机必须完整保留，你必须要让读者能够清晰的明白你为什么这么做。\n\
             \    - 必须完整保留所有核心概念、数据、逻辑链条和推导过程。\n\n4.  **数学公式排版 (Mathematical Typesetting):**\n\
-            \    - 所有数学符号、变量和公式，都**必须**使用 **LaTeX** 格式进行排版（例如，将 `beta` 写成 `$\\beta$`，将\
-            \ `chi-squared` 写成 `$\\chi^{2}$`）。\n\n以下是**强制性任务**：1 在打完代码之后必须检查markdown代码能否正确显示\
+            \    - 所有数学符号、变量和公式，都**必须**使用 **markdown** 格式进行排版。\n\n以下是**强制性任务**：1 在打完代码之后必须检查markdown代码能否正确显示\
             \ 2 对于录音稿中有证明的定理，必须在笔记中完整的证明。\n\n5.  **图表与引用处理 (Handling Figures & Citations):**\n\
             \    - 如果原文提到了图表，请使用 `Figure X: [图表描述]` 的格式插入占位符。\n    \n\n# 输出格式要求\n\
             最终的输出必须是一份结构完整的 Markdown 文档，直接以讲义标题开始，无需任何额外的开场白。\n这是**强制性要求**：**对每一个定义，定理，证明后面都必须加入评注，评注的内容是对定义，定理，证明的动机和思路的解释。**\n\
@@ -364,12 +382,12 @@ workflow:
       height: 89
       id: '1750859228099'
       position:
-        x: 1676.3717811462084
-        y: -143.56378089658443
+        x: 701.2050008099454
+        y: -171.9470135882844
       positionAbsolute:
-        x: 1676.3717811462084
-        y: -143.56378089658443
-      selected: false
+        x: 701.2050008099454
+        y: -171.9470135882844
+      selected: true
       sourcePosition: right
       targetPosition: left
       type: custom
@@ -387,11 +405,11 @@ workflow:
       height: 89
       id: '1750859966098'
       position:
-        x: 2403.207678842966
-        y: -148.73101350958717
+        x: 1284.0973612845105
+        y: -171.9470135882844
       positionAbsolute:
-        x: 2403.207678842966
-        y: -148.73101350958717
+        x: 1284.0973612845105
+        y: -171.9470135882844
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -439,11 +457,11 @@ workflow:
       height: 221
       id: '1750959843194'
       position:
-        x: 26.998209598897347
-        y: 208.80591951251824
+        x: -127.08219644175955
+        y: 107.43723132787551
       positionAbsolute:
-        x: 26.998209598897347
-        y: 208.80591951251824
+        x: -127.08219644175955
+        y: 107.43723132787551
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -471,11 +489,11 @@ workflow:
       height: 119
       id: '1750960446774'
       position:
-        x: 806.2373158714144
-        y: 159.75048745395236
+        x: 157.47771148970116
+        y: 115.07691996249987
       positionAbsolute:
-        x: 806.2373158714144
-        y: 159.75048745395236
+        x: 157.47771148970116
+        y: 115.07691996249987
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -522,11 +540,11 @@ workflow:
       height: 89
       id: '1750960472453'
       position:
-        x: 1217.9704864339374
-        y: 238.37073056455512
+        x: 439.4589611758814
+        y: 132.94729485252674
       positionAbsolute:
-        x: 1217.9704864339374
-        y: 238.37073056455512
+        x: 439.4589611758814
+        y: 132.94729485252674
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -545,11 +563,11 @@ workflow:
       height: 89
       id: '1750960563692'
       position:
-        x: 1710.5724797125501
-        y: 459.80884107051986
+        x: 737.43307313998
+        y: 208.414494372606
       positionAbsolute:
-        x: 1710.5724797125501
-        y: 459.80884107051986
+        x: 737.43307313998
+        y: 208.414494372606
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -568,11 +586,11 @@ workflow:
       height: 89
       id: '1751004247915'
       position:
-        x: 806.2373158714144
-        y: 536.8881011480521
+        x: 169.6419540718581
+        y: 390.91719016216666
       positionAbsolute:
-        x: 806.2373158714144
-        y: 536.8881011480521
+        x: 169.6419540718581
+        y: 390.91719016216666
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -620,11 +638,11 @@ workflow:
       height: 89
       id: '1751004391900'
       position:
-        x: 1651.8855299790457
-        y: -12.923080037500128
+        x: 686.8556184612473
+        y: -53.54659088874942
       positionAbsolute:
-        x: 1651.8855299790457
-        y: -12.923080037500128
+        x: 686.8556184612473
+        y: -53.54659088874942
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -643,11 +661,11 @@ workflow:
       height: 89
       id: '1751004416807'
       position:
-        x: 2033.4062789691693
-        y: 20.805938511770677
+        x: 983.6594924497513
+        y: -53.54659088874942
       positionAbsolute:
-        x: 2033.4062789691693
-        y: 20.805938511770677
+        x: 983.6594924497513
+        y: -53.54659088874942
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -691,11 +709,11 @@ workflow:
       height: 89
       id: '1751004582273'
       position:
-        x: 790.7858444235587
-        y: 299.5468814727983
+        x: 157.47771148970116
+        y: 263.05415372632694
       positionAbsolute:
-        x: 790.7858444235587
-        y: 299.5468814727983
+        x: 157.47771148970116
+        y: 263.05415372632694
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -708,18 +726,18 @@ workflow:
           - '1751004582273'
           - text
           variable: final_output
-        selected: true
+        selected: false
         title: 结束_QUIZ
         type: end
       height: 89
       id: '1751004673126'
       position:
-        x: 1341.9914648006336
-        y: 555.1687264645079
+        x: 439.4589611758814
+        y: 293.6375109481298
       positionAbsolute:
-        x: 1341.9914648006336
-        y: 555.1687264645079
-      selected: true
+        x: 439.4589611758814
+        y: 293.6375109481298
+      selected: false
       sourcePosition: right
       targetPosition: left
       type: custom
@@ -760,11 +778,11 @@ workflow:
       height: 89
       id: '1751005040735'
       position:
-        x: 748.8642367680719
-        y: 20.805938511770677
+        x: 142.67948142390856
+        y: -31.90577934424354
       positionAbsolute:
-        x: 748.8642367680719
-        y: 20.805938511770677
+        x: 142.67948142390856
+        y: -31.90577934424354
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -801,11 +819,11 @@ workflow:
       height: 173
       id: '1751005192292'
       position:
-        x: 1223.1175608257859
-        y: -148.73101350958717
+        x: 406.0859340575656
+        y: -63.58131543448731
       positionAbsolute:
-        x: 1223.1175608257859
-        y: -148.73101350958717
+        x: 406.0859340575656
+        y: -63.58131543448731
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -824,11 +842,11 @@ workflow:
       height: 89
       id: '1751013201792'
       position:
-        x: 1651.8855299790457
-        y: 115.07691996249987
+        x: 723.3483462077186
+        y: 62.36520210648564
       positionAbsolute:
-        x: 1651.8855299790457
-        y: 115.07691996249987
+        x: 723.3483462077186
+        y: 62.36520210648564
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -872,11 +890,11 @@ workflow:
       height: 89
       id: '1751015680829'
       position:
-        x: 2068.3044560254284
-        y: -148.73101350958717
+        x: 983.6594924497513
+        y: -171.9470135882844
       positionAbsolute:
-        x: 2068.3044560254284
-        y: -148.73101350958717
+        x: 983.6594924497513
+        y: -171.9470135882844
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -916,11 +934,11 @@ workflow:
       height: 89
       id: '1751016042181'
       position:
-        x: -635.967885126784
-        y: 51.00228780753122
+        x: -666.3784915821769
+        y: 40.926532415877915
       positionAbsolute:
-        x: -635.967885126784
-        y: 51.00228780753122
+        x: -666.3784915821769
+        y: 40.926532415877915
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -968,11 +986,11 @@ workflow:
       height: 221
       id: '1751016325280'
       position:
-        x: -361.6962235572132
-        y: 213.06179481085815
+        x: -400.2163250673774
+        y: 40.926532415877915
       positionAbsolute:
-        x: -361.6962235572132
-        y: 213.06179481085815
+        x: -400.2163250673774
+        y: 40.926532415877915
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -991,11 +1009,11 @@ workflow:
       height: 89
       id: '1751016778897'
       position:
-        x: -21.239113696531206
-        y: -127.15842958906644
+        x: -191.5385098467309
+        y: -183.92489497246638
       positionAbsolute:
-        x: -21.239113696531206
-        y: -127.15842958906644
+        x: -191.5385098467309
+        y: -183.92489497246638
       selected: false
       sourcePosition: right
       targetPosition: left
@@ -1014,17 +1032,17 @@ workflow:
       height: 89
       id: '1751016794408'
       position:
-        x: 14.549868103302884
-        y: 11.329369549421926
+        x: -171.96851815643976
+        y: -53.54659088874942
       positionAbsolute:
-        x: 14.549868103302884
-        y: 11.329369549421926
+        x: -171.96851815643976
+        y: -53.54659088874942
       selected: false
       sourcePosition: right
       targetPosition: left
       type: custom
       width: 244
     viewport:
-      x: -566.1399273762923
-      y: -15.788541495051163
-      zoom: 0.6426558913756701
+      x: 509.71708582654145
+      y: 268.8402174380253
+      zoom: 0.4899469085455871
