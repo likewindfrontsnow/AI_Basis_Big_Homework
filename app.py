@@ -26,15 +26,12 @@ with st.sidebar:
         help="选择 'Notes' 生成结构化笔记, 'Q&A' 生成问答对, 'Quiz' 生成测验题。"
     )
 
-    # --- START of MODIFICATION ---
-    # (已新增) 添加保留中间文件的选项
     st.markdown("---")
     keep_temp_files = st.checkbox(
         "保留中间文件", 
         value=False, 
         help="勾选后将保留上传的临时文件和语音转文字生成的 `source_transcript.txt`。"
     )
-    # --- END of MODIFICATION ---
 
     st.info("请在上方配置好参数后，上传文件开始处理。")
 
@@ -42,6 +39,16 @@ video_exts = {'mp4', 'mov','mpeg','webm'}
 audio_exts = {'mp3','m4a','wav','amr','mpga'}
 doc_exts = {'txt','md','mdx','markdown','pdf','html','xlsx','xls','doc','docx','csv','eml','msg','pptx','ppt','xml','epub'}
 all_exts = list(video_exts | audio_exts | doc_exts)
+
+# --- START of MODIFICATION ---
+# (已新增) 在文件上传框上方，增加一个可展开的提示，告知用户支持的文件格式
+with st.expander("查看所有支持的文件格式"):
+    st.markdown(f"""
+    - **视频文件**: `{', '.join(sorted(list(video_exts)))}`
+    - **音频文件**: `{', '.join(sorted(list(audio_exts)))}`
+    - **文档文件**: `{', '.join(sorted(list(doc_exts)))}`
+    """)
+# --- END of MODIFICATION ---
 
 uploaded_file = st.file_uploader(
     "上传视频、音频或文档", 
@@ -139,8 +146,6 @@ if uploaded_file is not None:
                     use_container_width=True
                 )
             
-            # --- START of MODIFICATION ---
-            # (已修改) 全新的、更稳健的临时文件清理逻辑
             if not keep_temp_files:
                 # 1. 清理上传的临时文件
                 try:
@@ -158,4 +163,3 @@ if uploaded_file is not None:
                     st.warning(f"无法自动删除文字稿文件 '{transcript_path}': {e}")
             else:
                 st.info("已根据您的设置，保留了中间文件。")
-            # --- END of MODIFICATION ---
