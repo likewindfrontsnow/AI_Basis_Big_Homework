@@ -42,6 +42,7 @@
 1.  **Python**: 建议使用 `3.9` 或更高版本。
 2.  **Git**: 用于克隆本项目仓库。
 3.  **FFmpeg**: **[必需]** 用于处理所有视频和音频文件。**这是最关键的依赖项，请务必参照下面的教程正确安装。**
+4.  **支持CUDA的PyTorch**：用于GPU加速处理本地whisper模型语音转文字
 
 ## 3.1 ffmpeg 安装教程
 
@@ -118,11 +119,85 @@ sudo apt update && sudo apt install ffmpeg
 
 安装完成后，运行验证命令。
 
-## 3.2 🚀 项目安装与配置
+## 3.2 支持CUDA的PyTorch安装教程
+
+### **步骤 1: 检查您的 NVIDIA CUDA 版本**
+
+首先，您需要知道您的 NVIDIA 驱动程序支持的最高 CUDA 版本。
+
+1.  打开您的命令行工具（Windows 用户请使用 CMD 或 PowerShell，macOS/Linux 用户请使用终端）。
+2.  输入以下命令并按回车：
+
+    ```bash
+    nvidia-smi
+    ```
+
+3.  在弹出的信息表的右上角，找到 `CUDA Version`。记下这个版本号，例如 `12.1`、`12.4` 等。
+
+### **步骤 2: (可选但推荐) 卸载旧版本**
+
+为了避免潜在的版本冲突，建议先完全卸载环境中可能存在的旧版 PyTorch。
+
+```bash
+# 多次执行此命令，直到系统提示“not installed”
+pip uninstall torch torchvision torchaudio
+```
+
+### **步骤 3: 从 PyTorch 官网获取安装命令**
+
+这是最关键的一步，请勿直接使用网络上搜索到的旧命令。
+
+1.  访问 PyTorch 官方网站的安装页面： [https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/)
+
+2.  在页面的 “INSTALL PYTORCH” 工具中，根据您的系统配置进行选择：
+    * **PyTorch Build**: 选择 `Stable` (稳定版)。
+    * **Your OS**: 选择您的操作系统 (Windows, Linux, Mac)。
+    * **Package**: 选择 `Pip`。
+    * **Language**: 选择 `Python`。
+    * **Compute Platform**: **选择一个等于或低于**您在步骤 1 中查到的 CUDA 版本。通常，选择官网上提供的最新 CUDA 选项即可（例如，如果您的版本是 `12.4`，选择官网的 `CUDA 12.1` 是完全正确的，因为它向后兼容）。
+
+3.  网站会自动生成一行安装命令。请**完整复制**这行命令。
+
+### **步骤 4: 执行安装**
+
+将上一步复制的完整命令粘贴到您的命令行中，然后按回车执行。
+
+一个为 CUDA 12.1 生成的典型命令如下所示（**请以您从官网复制的命令为准！**）：
+```bash
+pip install torch torchvision torchaudio --index-url [https://download.pytorch.org/whl/cu121](https://download.pytorch.org/whl/cu121)
+```
+安装过程可能需要一些时间，因为它会下载几个较大的文件。
+
+### **步骤 5: 验证安装**
+
+安装完成后，打开 Python 解释器来验证 GPU 是否被成功识别。
+
+1.  在命令行输入 `python` 并回车。
+2.  逐行输入以下代码：
+    ```python
+    import torch
+
+    # 检查 CUDA 是否可用
+    is_available = torch.cuda.is_available()
+    print(f"CUDA support is available: {is_available}")
+
+    if is_available:
+        # 获取 GPU 数量
+        device_count = torch.cuda.device_count()
+        print(f"Number of GPUs available: {device_count}")
+        
+        # 获取当前 GPU 的名称
+        current_device_name = torch.cuda.get_device_name(0)
+        print(f"Current GPU name: {current_device_name}")
+    ```
+
+如果输出结果中 `CUDA support is available: True`，则恭喜您，已成功安装 GPU 版本的 PyTorch！
+
+## 3.3 🚀 项目安装与配置
 
 从https://github.com/likewindfrontsnow/AI_Basis_Big_Homework 下载.zip文件并解压，或者使用git clone命令
 
-### 3.2.1 创建并激活虚拟环境（可选）
+### 3.3.1 创建并激活虚拟环境（可选）
 
 #### 不使用anaconda
 
@@ -145,7 +220,7 @@ conda create -n venv(可以自定义虚拟环境的名字) python=3.11(可以自
 conda activate venv(替换成自定义的名字)
 ```
 
-### 3.2.2 安装所有 Python 依赖包（必须）
+### 3.3.2 安装所有 Python 依赖包（必须）
 ```
 pip install -r requirements.txt
 ```
