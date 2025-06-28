@@ -38,8 +38,10 @@ def _process_chunk(args) -> str | None:
     
     try:
         print(f"开始生成第 {i+1}/{num_chunks} 个音频块: {output_filename}")
-        # Capture stderr and stdout to prevent them from printing directly unless an error occurs
-        subprocess.run(command, check=True, capture_output=True, text=True)
+        # --- START OF MODIFICATION ---
+        # (已修改) 增加了 encoding 和 errors 参数来解决 Windows 下的 gbk 解码错误
+        subprocess.run(command, check=True, capture_output=True, text=True, encoding='utf-8', errors='ignore')
+        # --- END OF MODIFICATION ---
         print(f"完成生成第 {i+1}/{num_chunks} 个音频块。")
         return output_filename
     except subprocess.CalledProcessError as e:

@@ -7,16 +7,67 @@ from config import DIFY_API_KEY
 st.set_page_config(page_title="智能笔记 Agent", layout="wide")
 st.title("👨‍💻 智能内容生成 Agent")
 st.markdown("上传您的视频、音频或文本文档，即可自动生成结构化笔记、Q&A 或测验。")
-st.info("💡 **提示**: 仅在处理视频或音频文件时需要提供 OpenAI API Key 用于语音转文字。处理文本文档则无需填写。")
+
+st.info(
+    "💡 **提示**: 处理文本文档完全免费。处理视频或音频时，您可以选择速度快但付费的 OpenAI API，"
+    "或选择完全免费但速度较慢的本地处理模式。"
+)
 
 with st.sidebar:
     st.header("⚙️ 参数配置")
     
-    openai_api_key = st.text_input(
-        "请输入您的 OpenAI API Key (可选)", 
-        type="password", 
-        help="您的密钥将仅用于视频/音频的语音转录，不会被保存。"
+    transcription_provider = st.selectbox(
+        "请选择语音转文字方式:",
+        ("OpenAI API (速度快)", "本地处理 (免费但较慢)"),
+        index=0,
+        help=(
+            "**OpenAI API**: 速度快，结果稳定，但需要您自己的 API Key 且会产生费用。"
+            "**本地处理**: 完全免费，但速度显著慢于API，尤其是在没有GPU的电脑上。首次使用会自动下载模型文件。"
+        )
     )
+    provider_key = "local" if transcription_provider == "本地处理 (免费但较慢)" else "openai_api"
+
+    local_model_selection = None
+    if provider_key == "local":
+        # 定义模型选项及其说明
+        model_options = {
+            # 格式: "用户看到的名称": ("内部标识符", "帮助说明")
+            "Faster-Whisper (Large-v3, 推荐)": (
+                "faster-whisper-large-v3", 
+                "速度与质量的最佳平衡。通过优化引擎，用接近中等模型的速度实现最高质量的转录。"
+            ),
+            "Whisper - Large-v3 (官方)": (
+                "whisper-large-v3", 
+                "官方实现，提供最高的准确度，但在没有顶级GPU的情况下速度极慢。"
+            ),
+            "Whisper - Medium (官方)": (
+                "whisper-medium",
+                "官方实现，准确度较好，速度慢于 a Faster-Whisper，适合中高端GPU。"
+            ),
+            "Whisper - Base (官方)": (
+                "whisper-base",
+                "官方实现，速度最快，占用资源最少，但准确度为基础水平，适合快速预览或无GPU环境。"
+            )
+        }
+        
+        selected_model_name = st.selectbox(
+            "请选择本地模型:",
+            options=model_options.keys(),
+            index=0, # 默认选中第一个 "Faster-Whisper"
+            help="不同模型在速度、准确度和资源占用上有所不同。首次使用会下载所选模型。"
+        )
+        local_model_selection, help_text = model_options[selected_model_name]
+        st.info(help_text) # 显示当前所选模型的详细说明
+
+    openai_api_key_input = st.text_input(
+        "请输入您的 OpenAI API Key", 
+        type="password", 
+        help="您的密钥将仅用于视频/音频的语音转录，不会被保存。",
+        disabled=(provider_key == "local")
+    )
+    
+    openai_api_key = openai_api_key_input if provider_key == "openai_api" else None
+
     output_filename = st.text_input("请输入希望的笔记文件名 (无需后缀)", value="我的学习笔记")
 
     query_option = st.selectbox(
@@ -40,15 +91,12 @@ audio_exts = {'mp3','m4a','wav','amr','mpga'}
 doc_exts = {'txt','md','mdx','markdown','pdf','html','xlsx','xls','doc','docx','csv','eml','msg','pptx','ppt','xml','epub'}
 all_exts = list(video_exts | audio_exts | doc_exts)
 
-# --- START of MODIFICATION ---
-# (已新增) 在文件上传框上方，增加一个可展开的提示，告知用户支持的文件格式
 with st.expander("查看所有支持的文件格式"):
     st.markdown(f"""
     - **视频文件**: `{', '.join(sorted(list(video_exts)))}`
     - **音频文件**: `{', '.join(sorted(list(audio_exts)))}`
     - **文档文件**: `{', '.join(sorted(list(doc_exts)))}`
     """)
-# --- END of MODIFICATION ---
 
 uploaded_file = st.file_uploader(
     "上传视频、音频或文档", 
@@ -61,8 +109,8 @@ if uploaded_file is not None:
         file_ext = os.path.splitext(uploaded_file.name)[1].lower().replace('.', '')
         is_media_file = file_ext in video_exts or file_ext in audio_exts
 
-        if is_media_file and not openai_api_key:
-            st.error("❌ 处理视频或音频文件需要 OpenAI API Key，请在左侧边栏输入。")
+        if is_media_file and provider_key == "openai_api" and not openai_api_key:
+            st.error("❌ 您选择了 OpenAI API 模式，请在左侧边栏输入您的 API Key。")
         else:
             st.markdown("---")
             st.subheader("处理进度")
@@ -81,6 +129,9 @@ if uploaded_file is not None:
             }
             st.subheader(processing_headers.get(query_option, "正在处理..."))
             st.info(f"当前生成模式: **{query_option}**")
+
+            if provider_key == "local":
+                 st.info(f"当前本地模型: **{local_model_selection}**")
             
             classification_display = st.empty()
             llm_output_container = st.empty()
@@ -96,7 +147,16 @@ if uploaded_file is not None:
             with open(temp_file_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
 
-            generator = main_process_generator(temp_file_path, openai_api_key, DIFY_API_KEY, output_filename, query_option)
+            generator = main_process_generator(
+                input_path=temp_file_path, 
+                openai_api_key=openai_api_key, 
+                dify_api_key=DIFY_API_KEY, 
+                output_filename=output_filename, 
+                query=query_option,
+                transcription_provider=provider_key,
+                local_model_selection=local_model_selection # 新增参数
+            )
+
             for event_type, value, *rest in generator:
                 text = rest[0] if rest else ""
 
@@ -147,14 +207,12 @@ if uploaded_file is not None:
                 )
             
             if not keep_temp_files:
-                # 1. 清理上传的临时文件
                 try:
                     if os.path.exists(temp_file_path):
                         os.remove(temp_file_path)
                 except OSError as e:
                     st.warning(f"无法自动删除临时上传文件 '{temp_file_path}': {e}")
 
-                # 2. 清理生成的文字稿文件
                 transcript_path = "source_transcript.txt"
                 try:
                     if os.path.exists(transcript_path):
