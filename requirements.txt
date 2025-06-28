@@ -1,12 +1,4 @@
-streamlit
 openai
-requests
 python-dotenv
-
-openai-whisper
-
-faster-whisper
-
-opencc-python-reimplemented
-
-huggingface-hub
+requests
+streamlit

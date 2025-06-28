@@ -16,3 +16,6 @@ Thumbs.db
 output_chunks/
 temp_uploads/
 source_transcript.txt
+
+# 最终生成的笔记文件 (匹配所有.md结尾的文件)
+*.md
